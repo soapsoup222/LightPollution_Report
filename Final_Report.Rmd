@@ -35,11 +35,7 @@ This research will mostly focus on yearly composite observations of luminosity.
 
 ```{r message=FALSE, warning=FALSE,}
 #Using the package made as a part of this project in order to work with Black Marble data
-install_github("soapsoup222/lightpollutionNL")
 library(lightpollutionNL)
-
-
-
 ```
 
 ## Methods
@@ -47,3 +43,4 @@ library(lightpollutionNL)
 ## Analysis
 
 ## Conclusion
+
