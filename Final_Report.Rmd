@@ -2,7 +2,8 @@
 title: "Light Pollution in Zeeland Report"
 author: "Vayona Narekuli"
 date: "April 18, 2024"
-output: html_document
+output:
+  officedown::rdocx_document
 ---
 
 # Light Pollution in Zeeland
@@ -15,6 +16,16 @@ UCR Data Center
 
 Apprenticeship Spring 2024
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tab.cap.fp_text = officer::fp_text_lite(italic = FALSE, bold = TRUE)) 
+library(tidyverse) 
+library(flextable)
+library(lightpollutionNL)
+
+bearer <- "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6InZheW9uYW4iLCJleHAiOjE3MTc0OTg3NjAsImlhdCI6MTcxMjMxNDc2MCwiaXNzIjoiRWFydGhkYXRhIExvZ2luIn0.kD3i29hDjeSANIi1iJBFPeNahfMgm6y1q6FYyDxvcxIGjCXZdhRyjpFUbaqimacr9liRRSWs9y7qzvm5cULYUvTZOFsVpbBxgspafIvq-mYfuuUl70kuxMKITOsaKYbkMrb5fKhOVFWFI2jj1eoKQfkQ1y-OmE2cQoiI6k6dbwZT2jOoMRnUBYwW_RUOcNDktIDlnRbj6tncd-F_FNTId8Es5XXQG1HY5ouhWE-OsWdfi-pU2chOPhc1LcollxPJTiiKAl8uXvYuEM-XgvlO2fm_CDo9D7H5xvTkQ4kTzLGrXw3QsOyReqk_FRBIPGxBbMUQtGQhpcSa3xgvSPqiLQ"
+
+```
+
 ## Introduction
 
 The implementation of the Darkness Areas Act in Middelburg in 2019 marked a significant step in addressing the issue of light pollution in Zeeland. This legislation, aimed at designating specific areas for darkness preservation(reference to the areas), underscored a growing recognition of the adverse effects of excessive artificial illumination on both the environment and human health. However, despite its noble intentions, the effectiveness of this act in reducing light pollution remains a subject of inquiry.
@@ -25,22 +36,89 @@ This investigation focuses on assessing the effectiveness of the 2019 Darkness A
 
 ## Data
 
-This study relied on NASA VIIRS data, known as Black Marble Night Time Lights data, for evaluating light pollution in Zeeland. This data uses remote sensing techniques to detect artificial light in units of radiance, and calibrates for confounding variables such as moonlight. There are many alternative approaches to researching light pollution, One such approach involves deploying ground-based measuring devices strategically. Although this approach may necessitate specialized equipment and expertise, it provides a unique perspective on light pollution dynamics and can help validate findings derived from satellite observations. This study however will focus on Black Marble data in order to maintain consistency across years. Additionally, both raw and calibrated Black Marble data is updated daily, making it possible for the methods in this project to be used for future analysis.
+This study relied on NASA VIIRS data, known as Black Marble Night Time Lights data[^1], for evaluating light pollution in Zeeland. This data uses remote sensing techniques to detect artificial light in units of radiance, and calibrates for confounding variables such as moonlight. There are many alternative approaches to researching light pollution, One such approach involves deploying ground-based measuring devices strategically. Although this approach may necessitate specialized equipment and expertise, it provides a unique perspective on light pollution dynamics and can help validate findings derived from satellite observations. This study however will focus on Black Marble data in order to maintain consistency across years. Additionally, both raw and calibrated Black Marble data is updated daily, making it possible for the methods in this project to be used for future analysis.
 
-However, it's essential to acknowledge VIIRS's limitations. Primarily designed to detect light sources near nadir, the dataset may not fully capture the extent of LED lighting, which often emits light at angles away from the vertical. Consequently, there's a possibility that VIIRS underestimates the true level of light pollution in areas where LED lighting is prevalent. However, as the main goal of this report is to identify changes in light pollution across years,
+[^1]: Román, M.O., Wang, Z., Sun, Q., Kalb, V., Miller, S.D., Molthan, A., Schultz, L., Bell, J., Stokes, E.C., Pandey, B. and Seto, K.C., et al. (2018). NASA's Black Marble nighttime lights product suite. Remote Sensing of Environment 210, 113-143. <doi:10.1016/j.rse.2018.03.017>.
 
-This research will mostly focus on yearly composite observations of luminosity.
-
-[Descriptive Statistics/Visualizations of the data]
-
-```{r message=FALSE, warning=FALSE,}
-#Using the package made as a part of this project in order to work with Black Marble data
-library(lightpollutionNL)
-```
+However, it's essential to acknowledge VIIRS's limitations. Primarily designed to detect light sources near nadir, the dataset may not fully capture the extent of LED lighting, which often emits light at angles away from the vertical. Consequently, there's a possibility that VIIRS underestimates the true level of light pollution in areas where LED lighting is prevalent.
 
 ## Methods
 
-## Analysis
+Duisternisgebieden (darkness areas) were appointed in Zeeland in January of 2019[^2]. This research will therefore focus on yearly composite mean radiance in the years 2015 to 2023.
+
+[^2]: <https://zoek.officielebekendmakingen.nl/prb-2019-180.html>
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+    NLD_Radiance <- get_NTLdf("NLD", 
+                              bearer,
+                              ymd = 2015:2023)
+
+    Zeeland_Radiance <- NLD_Radiance |> 
+      as.tibble() |> 
+      dplyr::select(NAME_1, ntl_mean, date) |>
+      filter(NAME_1 == "Zeeland") |> 
+      rename(
+        region = NAME_1,
+        year = date
+      )
+
+```
+
+```{r fig1, fig.cap="Mean Radiance 2015 to 2023", message=FALSE, warning=FALSE}
+
+ggplot(Zeeland_Radiance, aes(x = year, y = ntl_mean)) +
+  geom_bar(stat = "identity", fill = "darkcyan") +
+  geom_smooth(colour="orange")+
+  theme_minimal() +
+  labs(x = "Year", y = "Mean Radiance/[W/m2-sr]", title = "NTL Mean by Year")
+  
+```
+
+Figure 1 shows a rise in mean nighttime radiance until its peak in 2019, followed by a gradual decline until 2023. This suggests a possible effect of the light pollution reduction law implemented in 2019. However, the decline coincides with the onset of the COVID-19 pandemic in 2020. Further analysis is needed to determine whether the decrease is due to the law or the pandemic.
+
+In order to rule out the COVID-19 pandemic as a confounding variable, the relationship between economic activity and light pollution in Zeeland will be examined, as economic activity serves as a reliable proxy for human mobility and outdoor lighting patterns, both of which are directly impacted by pandemic-related restrictions and behavioral changes.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+zeeland <- regional_gdp_nominal |> 
+  filter(.region == "Zeeland ") |>
+  pivot_longer(
+    cols = contains("0"),
+    names_to = "year"
+  ) |> 
+  rename(nominal_gdp = value) |> 
+  mutate(
+    year = as.numeric(str_replace(year, "\\.", "")),
+    .region = NULL
+  ) |> 
+  right_join(Zeeland_Radiance) |> 
+  mutate(region = NULL)
+  
+```
+
+```{r fig2, fig.cap="Radiance and GDP in 2015 to 2023", message=FALSE, warning=FALSE}
+zeeland |> 
+  drop_na() |> 
+  ggplot()+
+  geom_line(aes(year, scale(ntl_mean), colour = "Radiance/[W/m2-sr]"),
+            size = 1)+
+  geom_line(aes(year, scale(nominal_gdp), colour = "Total Nominal GDP/million euros"),
+            size=1)+
+  theme_minimal()+
+  labs(x = "Year", y = "Scaled Unit")+
+  scale_x_continuous(breaks = c(2015, 2017, 2019, 2021))+
+  geom_vline(aes(xintercept = 2019), 
+             lwd = 5,
+             colour = "gold",
+             alpha = 0.3)
+```
+
+The graph illustrates the trends in light pollution radiance and total nominal GDP in Zeeland from 2015 to 2023 in scaled standard units. The graph shows a significant decline in light pollution radiance following the implementation of the darkness areas law in 2019. However, the total nominal GDP remains relatively stable throughout the period, suggesting that the reduction in light pollution is not correlated with a decrease in economic activity, such as the one observed during the COVID-19 pandemic. This implies that the decrease in light pollution was not necessarily due to the COVID-19 pandemic.
+
+After ruling out the pandemic as a possible reason for the decrease in light pollution, the visible levels of light pollution in Zeeland as well as in the darkness areas specifically can be investigated.
+
+```{r fig3, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+raster_2015 <- get_NTLraster("NLD", bearer, "VNP46A4", 2015)
+
+```
 
 ## Conclusion
-
