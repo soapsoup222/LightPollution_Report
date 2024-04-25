@@ -18,8 +18,9 @@ Apprenticeship Spring 2024
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(tab.cap.fp_text = officer::fp_text_lite(italic = FALSE, bold = TRUE)) 
-library(tidyverse) 
-library(flextable)
+library(tidyverse)
+library(tidyterra)
+library(raster)
 library(lightpollutionNL)
 
 bearer <- "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6InZheW9uYW4iLCJleHAiOjE3MTc0OTg3NjAsImlhdCI6MTcxMjMxNDc2MCwiaXNzIjoiRWFydGhkYXRhIExvZ2luIn0.kD3i29hDjeSANIi1iJBFPeNahfMgm6y1q6FYyDxvcxIGjCXZdhRyjpFUbaqimacr9liRRSWs9y7qzvm5cULYUvTZOFsVpbBxgspafIvq-mYfuuUl70kuxMKITOsaKYbkMrb5fKhOVFWFI2jj1eoKQfkQ1y-OmE2cQoiI6k6dbwZT2jOoMRnUBYwW_RUOcNDktIDlnRbj6tncd-F_FNTId8Es5XXQG1HY5ouhWE-OsWdfi-pU2chOPhc1LcollxPJTiiKAl8uXvYuEM-XgvlO2fm_CDo9D7H5xvTkQ4kTzLGrXw3QsOyReqk_FRBIPGxBbMUQtGQhpcSa3xgvSPqiLQ"
@@ -116,9 +117,55 @@ The graph illustrates the trends in light pollution radiance and total nominal G
 
 After ruling out the pandemic as a possible reason for the decrease in light pollution, the visible levels of light pollution in Zeeland as well as in the darkness areas specifically can be investigated.
 
-```{r fig3, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
-raster_2015 <- get_NTLraster("NLD", bearer, "VNP46A4", 2015)
+### Darkness Areas in Zeeland
 
+Figure 3 showcases the location of the 7 darkness areas in Zeeland, these designated darkness areas include water bodies as well as green areas. 
+```{r fig3, fig.cap="Darkness Areas in Zeeland", message=FALSE, warning=FALSE}
+library(geodata)
+
+zeeland <- gadm("NLD", level=1, path="Data/gadm")
+zeeland <- zeeland |> 
+  st_as_sf() |> 
+  filter(NAME_1=="Zeeland") |> 
+  dplyr::select(NAME_1, geometry)
+
+zeeland_sf <- st_set_crs(zeeland, value = 4326)
+darknessareas_sf <- st_set_crs(darknessareas_sf, value = 4326)
+
+ggplot()+
+  geom_sf(data=zeeland)+
+  geom_sf(data=darknessareas_sf, aes(fill=name))+
+  theme_minimal()
+```
+
+```{r fig4, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+darknesssareas_raster <- get_NTLraster("NLD", bearer, "VNP46A4", 2015)
+
+ggplot()+
+  geom_tile(aes(x, y, colour=value), data=darknesssareas_raster)+
+  geom_sf(data=darknessareas_sf, aes(fill=name, alpha=0.1))+
+  coord_sf(xlim = c(3.2821, 4.2995), ylim = c(51.1755,51.8033))
+```
+
+#### Veerse Meer
+
+```{r fig3, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+library(terra)
+library(sf)
+
+veersemeer <- darknessareas_sf |> 
+  filter(name == "Veerse Meer") |> st_as_sf()
+
+veersemeer_raster <- get_NTLraster("NLD", bearer, "VNP46A4", 2015)
+
+veersemeer_raster <- veersemeer_raster |> rast()
+veersemeer_map <- mask(veersemeer_raster, veersemeer)
+veersemeer_df <- veersemeer_map |> rasterToPoints(spatial = TRUE) |> as.data.frame() |> 
+  rename()
+
+
+ggplot()+
+  geom_tile(data=veersemeer_df, aes(x, y, fill=layer))
 ```
 
 ## Conclusion
