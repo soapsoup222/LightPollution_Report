@@ -18,6 +18,7 @@ Apprenticeship Spring 2024
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(tab.cap.fp_text = officer::fp_text_lite(italic = FALSE, bold = TRUE)) 
+library(officedown)
 library(tidyverse)
 library(tidyterra)
 library(raster)
@@ -137,35 +138,85 @@ ggplot()+
   geom_sf(data=darknessareas_sf, aes(fill=name))+
   theme_minimal()
 ```
+Unfortunately, radiance for large areas of water bodies such as Oosterschelde or Grevelingen is unavailable as it's extremely difficult to discern radiance against the water reflections. Additionally, radiance values on water bodies are often so low they are indiscernible from general noise. Therefore, we will focus on the land and smaller water body areas. 
 
-```{r fig4, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
-darknesssareas_raster <- get_NTLraster("NLD", bearer, "VNP46A4", 2015)
+#### Manteling Van Walcheren 
 
-ggplot()+
-  geom_tile(aes(x, y, colour=value), data=darknesssareas_raster)+
-  geom_sf(data=darknessareas_sf, aes(fill=name, alpha=0.1))+
-  coord_sf(xlim = c(3.2821, 4.2995), ylim = c(51.1755,51.8033))
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+mantelingvanwalcheren_sf <- darknessareas_sf |> 
+  filter(name == "Manteling Van Walcheren") |> st_as_sf()
+st_crs(mantelingvanwalcheren_sf) <- "WGS84"
+
+mantelingvanwalcheren_raster <- bm_raster(roi_sf = darknessareas_sf,
+                               product_id = "VNP46A4",
+                               date=2015,
+                               bearer=bearer)
+
+crs(mantelingvanwalcheren_raster) <- "WGS84"
+mantelingvanwalcheren_raster <- log10(mantelingvanwalcheren_raster+1)
+
+mantelingvanwalcheren_map <- raster::mask(mantelingvanwalcheren_raster, mantelingvanwalcheren_sf)
+
+plot(mantelingvanwalcheren_map)
 ```
 
+#### Kop van Schouwen 
+
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+kopvanschouwen_sf <- darknessareas_sf |> 
+  filter(name == "Kop van Schouwen") |> st_as_sf()
+st_crs(kopvanschouwen_sf) <- "WGS84"
+
+kopvanschouwen_raster <- bm_raster(roi_sf = darknessareas_sf,
+                               product_id = "VNP46A4",
+                               date=2015,
+                               bearer=bearer)
+
+crs(kopvanschouwen_raster) <- "WGS84"
+kopvanschouwen_raster <- log10(kopvanschouwen_raster+1)
+
+kopvanschouwen_map <- raster::mask(kopvanschouwen_raster, kopvanschouwen_sf)
+
+plot(kopvanschouwen_map)
+```
 #### Veerse Meer
 
-```{r fig3, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
-library(terra)
-library(sf)
-
-veersemeer <- darknessareas_sf |> 
+```{r fig6, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+veersemeer_sf <- darknessareas_sf |> 
   filter(name == "Veerse Meer") |> st_as_sf()
+st_crs(veersemeer_sf) <- "WGS84"
 
-veersemeer_raster <- get_NTLraster("NLD", bearer, "VNP46A4", 2015)
+veersemeer_raster <- bm_raster(roi_sf = darknessareas_sf,
+                               product_id = "VNP46A4",
+                               date=2015,
+                               bearer=bearer)
 
-veersemeer_raster <- veersemeer_raster |> rast()
-veersemeer_map <- mask(veersemeer_raster, veersemeer)
-veersemeer_df <- veersemeer_map |> rasterToPoints(spatial = TRUE) |> as.data.frame() |> 
-  rename()
+crs(veersemeer_raster) <- "WGS84"
+veersemeer_raster <- log10(veersemeer_raster+1)
+
+veersemeer_map <- raster::mask(veersemeer_raster, veersemeer_sf)
+
+plot(veersemeer_map)
+```
 
 
-ggplot()+
-  geom_tile(data=veersemeer_df, aes(x, y, fill=layer))
+### South Zeeland: Verdronken Zwarte Polder, Zwin en Kievittepolder
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+southzeeland_sf <- darknessareas_sf |> 
+  filter(name == c("Verdronken Zwarte Polder","Zwin en Kievittepolder")) |> st_as_sf()
+st_crs(southzeeland_sf) <- "WGS84"
+
+southzeeland_raster <- bm_raster(roi_sf = darknessareas_sf,
+                               product_id = "VNP46A4",
+                               date=2015,
+                               bearer=bearer)
+
+crs(southzeeland_raster) <- "WGS84"
+southzeeland_raster <- log10(southzeeland_raster+1)
+
+southzeeland_map <- raster::mask(southzeeland_raster, southzeeland_sf)
+
+plot(southzeeland_map)
 ```
 
 ## Conclusion
