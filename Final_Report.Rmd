@@ -19,10 +19,13 @@ Apprenticeship Spring 2024
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(tab.cap.fp_text = officer::fp_text_lite(italic = FALSE, bold = TRUE)) 
 library(officedown)
+library(patchwork)
 library(tidyverse)
 library(tidyterra)
 library(raster)
+library(sf)
 library(lightpollutionNL)
+library(blackmarbler)
 
 bearer <- "eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ.eyJ0eXBlIjoiVXNlciIsInVpZCI6InZheW9uYW4iLCJleHAiOjE3MTc0OTg3NjAsImlhdCI6MTcxMjMxNDc2MCwiaXNzIjoiRWFydGhkYXRhIExvZ2luIn0.kD3i29hDjeSANIi1iJBFPeNahfMgm6y1q6FYyDxvcxIGjCXZdhRyjpFUbaqimacr9liRRSWs9y7qzvm5cULYUvTZOFsVpbBxgspafIvq-mYfuuUl70kuxMKITOsaKYbkMrb5fKhOVFWFI2jj1eoKQfkQ1y-OmE2cQoiI6k6dbwZT2jOoMRnUBYwW_RUOcNDktIDlnRbj6tncd-F_FNTId8Es5XXQG1HY5ouhWE-OsWdfi-pU2chOPhc1LcollxPJTiiKAl8uXvYuEM-XgvlO2fm_CDo9D7H5xvTkQ4kTzLGrXw3QsOyReqk_FRBIPGxBbMUQtGQhpcSa3xgvSPqiLQ"
 
@@ -78,7 +81,7 @@ ggplot(Zeeland_Radiance, aes(x = year, y = ntl_mean)) +
 
 Figure 1 shows a rise in mean nighttime radiance until its peak in 2019, followed by a gradual decline until 2023. This suggests a possible effect of the light pollution reduction law implemented in 2019. However, the decline coincides with the onset of the COVID-19 pandemic in 2020. Further analysis is needed to determine whether the decrease is due to the law or the pandemic.
 
-In order to rule out the COVID-19 pandemic as a confounding variable, the relationship between economic activity and light pollution in Zeeland will be examined, as economic activity serves as a reliable proxy for human mobility and outdoor lighting patterns, both of which are directly impacted by pandemic-related restrictions and behavioral changes.
+In order to rule out the COVID-19 pandemic as a confounding variable, the relationship between economic activity and light pollution in Zeeland will be examined, as economic activity serves as a reliable proxy for human mobility and outdoor lighting patterns, both of which are directly impacted by pandemic-related restrictions and behavioral changes. Essentially, you would expect economic activity to reduce due to COVID and therefore light pollution to reduce also. 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 zeeland <- regional_gdp_nominal |> 
@@ -114,13 +117,14 @@ zeeland |>
              alpha = 0.3)
 ```
 
-The graph illustrates the trends in light pollution radiance and total nominal GDP in Zeeland from 2015 to 2023 in scaled standard units. The graph shows a significant decline in light pollution radiance following the implementation of the darkness areas law in 2019. However, the total nominal GDP remains relatively stable throughout the period, suggesting that the reduction in light pollution is not correlated with a decrease in economic activity, such as the one observed during the COVID-19 pandemic. This implies that the decrease in light pollution was not necessarily due to the COVID-19 pandemic.
+The graph illustrates the trends in light pollution radiance and total nominal GDP in Zeeland from 2015 to 2023 in scaled standard units. The graph shows a significant decline in light pollution radiance following the implementation of the darkness areas law in 2019. However, the total nominal GDP remains relatively stable throughout the period, suggesting that the reduction in light pollution is not correlated with a decrease in economic activity, such as the one observed during the COVID-19 pandemic. This implies that the decrease in light pollution was not necessarily due to the COVID-19 pandemic, which implies that the effects of the darkness areas law measures are being picked up.
 
 After ruling out the pandemic as a possible reason for the decrease in light pollution, the visible levels of light pollution in Zeeland as well as in the darkness areas specifically can be investigated.
 
 ### Darkness Areas in Zeeland
 
-Figure 3 showcases the location of the 7 darkness areas in Zeeland, these designated darkness areas include water bodies as well as green areas. 
+Figure 3 showcases the location of the 7 darkness areas in Zeeland, these designated darkness areas include water bodies as well as green areas.
+
 ```{r fig3, fig.cap="Darkness Areas in Zeeland", message=FALSE, warning=FALSE}
 library(geodata)
 
@@ -138,29 +142,74 @@ ggplot()+
   geom_sf(data=darknessareas_sf, aes(fill=name))+
   theme_minimal()
 ```
-Unfortunately, radiance for large areas of water bodies such as Oosterschelde or Grevelingen is unavailable as it's extremely difficult to discern radiance against the water reflections. Additionally, radiance values on water bodies are often so low they are indiscernible from general noise. Therefore, we will focus on the land and smaller water body areas. 
 
-#### Manteling Van Walcheren 
+Unfortunately, radiance for large areas of water bodies such as Oosterschelde or Grevelingen is unavailable as it's extremely difficult to discern radiance against the water reflections. Additionally, radiance values on water bodies are often so low they are indiscernible from general noise. Therefore, we will focus on the land and smaller water body areas.
 
-```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+```{r preset, include=FALSE}
+darknessareas_raster <- bm_raster(roi_sf = darknessareas_sf,
+                               product_id = "VNP46A4",
+                               date=2015:2023,
+                               bearer=bearer)
+
+crs(darknessareas_raster) <- "WGS84"
+darknesssareas_raster <- log10(darknessareas_raster+1)
+ 
+```
+#### Manteling Van Walcheren
+
+```{r fig3, fig.cap="Darkness Areas in Zeeland", message=FALSE, warning=FALSE}
 mantelingvanwalcheren_sf <- darknessareas_sf |> 
   filter(name == "Manteling Van Walcheren") |> st_as_sf()
 st_crs(mantelingvanwalcheren_sf) <- "WGS84"
 
-mantelingvanwalcheren_raster <- bm_raster(roi_sf = darknessareas_sf,
-                               product_id = "VNP46A4",
-                               date=2015,
-                               bearer=bearer)
-
-crs(mantelingvanwalcheren_raster) <- "WGS84"
-mantelingvanwalcheren_raster <- log10(mantelingvanwalcheren_raster+1)
-
-mantelingvanwalcheren_map <- raster::mask(mantelingvanwalcheren_raster, mantelingvanwalcheren_sf)
-
-plot(mantelingvanwalcheren_map)
+ggplot()+
+  geom_sf(data=zeeland)+
+  geom_sf(data=mantelingvanwalcheren_sf, aes(fill=name))+
+  theme_minimal()
 ```
 
-#### Kop van Schouwen 
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+mantelingvanwalcheren_raster <- mask(darknessareas_raster, mantelingvanwalcheren_sf)
+
+t2015 <- mantelingvanwalcheren_raster[["t2015"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2019 <- mantelingvanwalcheren_raster[["t2019"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2023 <- mantelingvanwalcheren_raster[["t2023"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+
+p2015 <- ggplot(data = t2015) + geom_raster(aes(x = x, y = y, fill = t2015))
+p2019 <- ggplot(data = t2019) + geom_raster(aes(x = x, y = y, fill = t2019)) 
+p2023 <- ggplot(data = t2023) + geom_raster(aes(x = x, y = y, fill = t2023)) 
+
+p2015|> theme_neonheatmap()/p2019|> theme_neonheatmap()/p2023|> theme_neonheatmap()
+
+
+```
+
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+
+new_names <- paste0("t", seq(from = 2015, to = 2023, by = 1))
+
+mantelingvanwalcheren_df <- get_stackvalues(mantelingvanwalcheren_raster) |> as.tibble() |> 
+  rename_with(.fn = ~ paste0(seq(from = 2015, to = 2023, by = 1)), .cols = everything())|> 
+  summarise(across(where(is.numeric), mean, na.rm = TRUE)) |> 
+  pivot_longer(cols = everything(),
+               names_to = "year", 
+               values_to = "ntl_mean")
+
+
+ggplot(mantelingvanwalcheren_df, aes(x = as.numeric(year), y = ntl_mean)) +
+  geom_bar(stat = "identity", fill = "darkcyan") +
+  geom_smooth(colour="orange")+
+  theme_minimal() +
+  labs(x = "Year", y = "Mean Radiance/[W/m2-sr]", title = "NTL Mean by Year Manteling Van Walcheren")
+  
+```
+#### Kop van Schouwen
 
 ```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
 kopvanschouwen_sf <- darknessareas_sf |> 
@@ -179,6 +228,7 @@ kopvanschouwen_map <- raster::mask(kopvanschouwen_raster, kopvanschouwen_sf)
 
 plot(kopvanschouwen_map)
 ```
+
 #### Veerse Meer
 
 ```{r fig6, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
@@ -199,8 +249,8 @@ veersemeer_map <- raster::mask(veersemeer_raster, veersemeer_sf)
 plot(veersemeer_map)
 ```
 
-
 ### South Zeeland: Verdronken Zwarte Polder, Zwin en Kievittepolder
+
 ```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
 southzeeland_sf <- darknessareas_sf |> 
   filter(name == c("Verdronken Zwarte Polder","Zwin en Kievittepolder")) |> st_as_sf()
@@ -218,5 +268,7 @@ southzeeland_map <- raster::mask(southzeeland_raster, southzeeland_sf)
 
 plot(southzeeland_map)
 ```
+
+##Analysis 
 
 ## Conclusion
