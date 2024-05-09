@@ -81,7 +81,7 @@ ggplot(Zeeland_Radiance, aes(x = year, y = ntl_mean)) +
 
 Figure 1 shows a rise in mean nighttime radiance until its peak in 2019, followed by a gradual decline until 2023. This suggests a possible effect of the light pollution reduction law implemented in 2019. However, the decline coincides with the onset of the COVID-19 pandemic in 2020. Further analysis is needed to determine whether the decrease is due to the law or the pandemic.
 
-In order to rule out the COVID-19 pandemic as a confounding variable, the relationship between economic activity and light pollution in Zeeland will be examined, as economic activity serves as a reliable proxy for human mobility and outdoor lighting patterns, both of which are directly impacted by pandemic-related restrictions and behavioral changes. Essentially, you would expect economic activity to reduce due to COVID and therefore light pollution to reduce also. 
+In order to rule out the COVID-19 pandemic as a confounding variable, the relationship between economic activity and light pollution in Zeeland will be examined, as economic activity serves as a reliable proxy for human mobility and outdoor lighting patterns, both of which are directly impacted by pandemic-related restrictions and behavioral changes. Essentially, you would expect economic activity to reduce due to COVID and therefore light pollution to reduce also.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 zeeland <- regional_gdp_nominal |> 
@@ -155,6 +155,7 @@ crs(darknessareas_raster) <- "WGS84"
 darknesssareas_raster <- log10(darknessareas_raster+1)
  
 ```
+
 #### Manteling Van Walcheren
 
 ```{r fig3, fig.cap="Darkness Areas in Zeeland", message=FALSE, warning=FALSE}
@@ -209,66 +210,173 @@ ggplot(mantelingvanwalcheren_df, aes(x = as.numeric(year), y = ntl_mean)) +
   labs(x = "Year", y = "Mean Radiance/[W/m2-sr]", title = "NTL Mean by Year Manteling Van Walcheren")
   
 ```
+
+Based on the bar graph above, it does seem that although the radiance decreased for the years 2019 to 2021, it slowly began to increase once again.
+
 #### Kop van Schouwen
 
-```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+```{r fig3, fig.cap="Darkness Areas in Zeeland", message=FALSE, warning=FALSE}
 kopvanschouwen_sf <- darknessareas_sf |> 
   filter(name == "Kop van Schouwen") |> st_as_sf()
 st_crs(kopvanschouwen_sf) <- "WGS84"
 
-kopvanschouwen_raster <- bm_raster(roi_sf = darknessareas_sf,
-                               product_id = "VNP46A4",
-                               date=2015,
-                               bearer=bearer)
+ggplot()+
+  geom_sf(data=zeeland)+
+  geom_sf(data=kopvanschouwen_sf, aes(fill=name))+
+  theme_minimal()
+```
 
-crs(kopvanschouwen_raster) <- "WGS84"
-kopvanschouwen_raster <- log10(kopvanschouwen_raster+1)
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+kopvanschouwen_raster <- mask(darknessareas_raster, kopvanschouwen_sf)
 
-kopvanschouwen_map <- raster::mask(kopvanschouwen_raster, kopvanschouwen_sf)
+t2015 <- kopvanschouwen_raster[["t2015"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2019 <- kopvanschouwen_raster[["t2019"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2023 <- kopvanschouwen_raster[["t2023"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
 
-plot(kopvanschouwen_map)
+p2015 <- ggplot(data = t2015) + geom_raster(aes(x = x, y = y, fill = t2015))
+p2019 <- ggplot(data = t2019) + geom_raster(aes(x = x, y = y, fill = t2019)) 
+p2023 <- ggplot(data = t2023) + geom_raster(aes(x = x, y = y, fill = t2023)) 
+
+p2015|> theme_neonheatmap()/p2019|> theme_neonheatmap()/p2023|> theme_neonheatmap()
+
+
+```
+
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+
+new_names <- paste0("t", seq(from = 2015, to = 2023, by = 1))
+
+kopvanschouwen_df <- get_stackvalues(kopvanschouwen_raster) |> as.tibble() |> 
+  rename_with(.fn = ~ paste0(seq(from = 2015, to = 2023, by = 1)), .cols = everything())|> 
+  summarise(across(where(is.numeric), mean, na.rm = TRUE)) |> 
+  pivot_longer(cols = everything(),
+               names_to = "year", 
+               values_to = "ntl_mean")
+
+
+ggplot(kopvanschouwen_df, aes(x = as.numeric(year), y = ntl_mean)) +
+  geom_bar(stat = "identity", fill = "darkcyan") +
+  geom_smooth(colour="orange")+
+  theme_minimal() +
+  labs(x = "Year", y = "Mean Radiance/[W/m2-sr]", title = "NTL Mean by Year Kop Van Schouwen")
+  
 ```
 
 #### Veerse Meer
 
-```{r fig6, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
-veersemeer_sf <- darknessareas_sf |> 
+```{r fig3, fig.cap="Darkness Areas in Zeeland", message=FALSE, warning=FALSE}
+veersemeer_sf <- veersemeer_sf |> 
   filter(name == "Veerse Meer") |> st_as_sf()
-st_crs(veersemeer_sf) <- "WGS84"
+st_crs(kopvanschouwen_sf) <- "WGS84"
 
-veersemeer_raster <- bm_raster(roi_sf = darknessareas_sf,
-                               product_id = "VNP46A4",
-                               date=2015,
-                               bearer=bearer)
+ggplot()+
+  geom_sf(data=zeeland)+
+  geom_sf(data=veersemeer_sf, aes(fill=name))+
+  theme_minimal()
+```
 
-crs(veersemeer_raster) <- "WGS84"
-veersemeer_raster <- log10(veersemeer_raster+1)
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+veersemeer_raster <- mask(darknessareas_raster, veersemeer_sf)
 
-veersemeer_map <- raster::mask(veersemeer_raster, veersemeer_sf)
+t2015 <- veersemeer_raster[["t2015"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2019 <- veersemeer_raster[["t2019"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2023 <- veersemeer_raster[["t2023"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
 
-plot(veersemeer_map)
+p2015 <- ggplot(data = t2015) + geom_raster(aes(x = x, y = y, fill = t2015))
+p2019 <- ggplot(data = t2019) + geom_raster(aes(x = x, y = y, fill = t2019)) 
+p2023 <- ggplot(data = t2023) + geom_raster(aes(x = x, y = y, fill = t2023)) 
+
+p2015|> theme_neonheatmap()/p2019|> theme_neonheatmap()/p2023|> theme_neonheatmap()
+
+
+```
+
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+
+new_names <- paste0("t", seq(from = 2015, to = 2023, by = 1))
+
+veersemeer_df <- get_stackvalues(veersemeer_raster) |> as.tibble() |> 
+  rename_with(.fn = ~ paste0(seq(from = 2015, to = 2023, by = 1)), .cols = everything())|> 
+  summarise(across(where(is.numeric), mean, na.rm = TRUE)) |> 
+  pivot_longer(cols = everything(),
+               names_to = "year", 
+               values_to = "ntl_mean")
+
+
+ggplot(veersemeer_df, aes(x = as.numeric(year), y = ntl_mean)) +
+  geom_bar(stat = "identity", fill = "darkcyan") +
+  geom_smooth(colour="orange")+
+  theme_minimal() +
+  labs(x = "Year", y = "Mean Radiance/[W/m2-sr]", title = "NTL Mean by Year Veerse Meer")
+  
 ```
 
 ### South Zeeland: Verdronken Zwarte Polder, Zwin en Kievittepolder
-
-```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+```{r fig3, fig.cap="Darkness Areas in Zeeland", message=FALSE, warning=FALSE}
 southzeeland_sf <- darknessareas_sf |> 
   filter(name == c("Verdronken Zwarte Polder","Zwin en Kievittepolder")) |> st_as_sf()
 st_crs(southzeeland_sf) <- "WGS84"
 
-southzeeland_raster <- bm_raster(roi_sf = darknessareas_sf,
-                               product_id = "VNP46A4",
-                               date=2015,
-                               bearer=bearer)
-
-crs(southzeeland_raster) <- "WGS84"
-southzeeland_raster <- log10(southzeeland_raster+1)
-
-southzeeland_map <- raster::mask(southzeeland_raster, southzeeland_sf)
-
-plot(southzeeland_map)
+ggplot()+
+  geom_sf(data=zeeland)+
+  geom_sf(data=southzeeland_sf, aes(fill=name))+
+  theme_minimal()
 ```
 
-##Analysis 
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+southzeeland_raster <- mask(darknessareas_raster, southzeeland_sf)
+
+t2015 <- southzeeland_raster[["t2015"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2019 <- southzeeland_raster[["t2019"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+t2023 <- southzeeland_raster[["t2023"]] |> 
+  rasterToPoints(spatial = TRUE) |> 
+  as.data.frame()
+
+p2015 <- ggplot(data = t2015) + geom_raster(aes(x = x, y = y, fill = t2015))
+p2019 <- ggplot(data = t2019) + geom_raster(aes(x = x, y = y, fill = t2019)) 
+p2023 <- ggplot(data = t2023) + geom_raster(aes(x = x, y = y, fill = t2023)) 
+
+p2015|> theme_neonheatmap()/p2019|> theme_neonheatmap()/p2023|> theme_neonheatmap()
+
+
+```
+
+```{r fig5, fig.cap="Radiance 2015", message=FALSE, warning=FALSE}
+
+new_names <- paste0("t", seq(from = 2015, to = 2023, by = 1))
+
+southzeeland_df <- get_stackvalues(southzeeland_raster) |> as.tibble() |> 
+  rename_with(.fn = ~ paste0(seq(from = 2015, to = 2023, by = 1)), .cols = everything())|> 
+  summarise(across(where(is.numeric), mean, na.rm = TRUE)) |> 
+  pivot_longer(cols = everything(),
+               names_to = "year", 
+               values_to = "ntl_mean")
+
+
+ggplot(southzeeland_df, aes(x = as.numeric(year), y = ntl_mean)) +
+  geom_bar(stat = "identity", fill = "darkcyan") +
+  geom_smooth(colour="orange")+
+  theme_minimal() +
+  labs(x = "Year", y = "Mean Radiance/[W/m2-sr]", title = "NTL Mean by Year South Zeeland")
+  
+```
+
+##Analysis
 
 ## Conclusion
